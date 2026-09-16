@@ -4,7 +4,7 @@ Single-page static site for **webservicesforbusiness.com**. No build step, no
 dependencies, no backend. Open `index.html` and it runs.
 
 ```
-site/
+.
 ├── index.html              the deploy build — markup, CSS and JS inline
 ├── index.standalone.html   same page with fonts inlined; opens with no server
 ├── robots.txt              allows indexing — the site is live
@@ -16,8 +16,12 @@ site/
 
 ## Deploy
 
-Vercel: set **Root Directory** to `site`, Framework Preset **Other**, and leave
-build/install/output empty. Any static host works the same way.
+Vercel: import this repository, Framework Preset **Other**, and leave Root
+Directory, build, install and output all empty — the site is served from the
+repository root as-is. Any static host works the same way.
+
+This site previously lived in `site/` inside `ryhicks1/scripttocast`. It was
+split out with `git subtree split`, so the commit history came across intact.
 
 ## Indexing
 
@@ -38,7 +42,7 @@ environment, so each card currently falls back to a styled brand plate keyed to
 that site's real colours. The page is not broken without them — it just gets
 better with them.
 
-To generate them, from inside `site/`:
+To generate them, from the repository root:
 
 ```bash
 npm i -D playwright
