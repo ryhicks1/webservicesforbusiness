@@ -18,7 +18,9 @@ dependencies, no backend. Open `index.html` and it runs.
 
 Vercel: import this repository, Framework Preset **Other**, and leave Root
 Directory, build, install and output all empty — the site is served from the
-repository root as-is. Any static host works the same way.
+repository root as-is. `/api/contact.js` is picked up as a Function without a
+build step. Any static host can serve the pages; the form needs that Function
+(or an equivalent) to deliver mail.
 
 This site previously lived in `site/` inside `ryhicks1/scripttocast`. It was
 split out with `git subtree split`, so the commit history came across intact.
@@ -82,6 +84,25 @@ so a missing or failed image reveals the plate underneath instead of a broken ic
 
 ## Contact form
 
-Posts nowhere: validates, then opens the visitor's mail client. A honeypot field
-is in place. To wire a backend, add `action` and `method` to `<form id="enquiry">`
-— the submit handler steps aside when an `action` is present.
+The homepage form posts to `/api/contact` (a Vercel Function). It checks the
+name, email, and message, ignores a filled honeypot, and sends the enquiry to
+support@webservicesforbusiness.com through [Resend](https://resend.com). The
+button label is **Send** on the form, on the mobile jump link beside the
+contact details, and on the mobile dock.
+
+Mail is not delivered until `RESEND_API_KEY` is set. If the key is missing, or
+Resend rejects the send, the page stays up and shows the phone and email
+fallback. Nothing in the repository is a secret.
+
+Set this on the Vercel project **webservicesforbusiness** → Settings →
+Environment Variables, then redeploy:
+
+| Variable | Required | Where to get it |
+| --- | --- | --- |
+| `RESEND_API_KEY` | Yes | [resend.com/api-keys](https://resend.com/api-keys) after creating a free account |
+| `RESEND_FROM` | No | Verified sender. Default is `Web Services for Business <support@webservicesforbusiness.com>` |
+
+Verify the domain at [resend.com/domains](https://resend.com/domains) and add
+the DNS records Resend shows. Do not replace existing MX records.
+
+See `.env.example`. Run `node --test tools/enquiry.test.cjs` to check the endpoint.

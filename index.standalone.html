@@ -114,10 +114,8 @@
   --maxw:84rem;
   --sec-y:clamp(4rem,8vw,7rem);
   --ease:cubic-bezier(.22,.61,.36,1);
-  --banner-extra:2.75rem;
+  --banner-extra:0px;
 }
-@media (max-width:640px){:root{--banner-extra:4.35rem}}
-html.banner-off{--banner-extra:0px}
 
 *,*::before,*::after{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
@@ -218,25 +216,6 @@ h1,h2,h3{font-weight:800;letter-spacing:-.035em;line-height:1.02}
 .menu-foot{border-top:1px solid var(--line);padding-top:1rem;display:grid;gap:.4rem;font-size:.9375rem}
 body.locked{overflow:hidden}
 
-/* ═══ Session banner ══════════════════════════════════════════════════════ */
-.session-banner{background:#131619;border-bottom:1px solid var(--accent);color:var(--text)}
-html.banner-off .session-banner{display:none}
-.session-banner-in{max-width:var(--maxw);margin-inline:auto;padding:.5rem var(--gutter);
-  display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:.45rem .75rem}
-.session-banner p{font-size:.8125rem;font-weight:600;letter-spacing:-.01em;line-height:1.35;overflow-wrap:anywhere}
-body.locked .session-banner{display:none}
-.session-banner-cta{display:inline-flex;align-items:center;background:var(--text);color:#0C0D0F;
-  font-size:.75rem;font-weight:700;letter-spacing:-.01em;padding:.38rem .75rem;white-space:nowrap}
-.session-banner-cta:hover{background:#fff}
-.session-banner-x{background:none;border:0;color:var(--text-2);cursor:pointer;padding:.25rem .2rem;
-  font-size:.875rem;line-height:1;font-family:var(--mono)}
-.session-banner-x:hover{color:var(--text)}
-@media (max-width:640px){
-  .session-banner-in{grid-template-columns:minmax(0,1fr) auto}
-  .session-banner p{grid-column:1/-1}
-}
-@media print{.session-banner{display:none!important}}
-
 /* ═══ Hero ════════════════════════════════════════════════════════════════ */
 .hero{padding-top:calc(clamp(7rem,14vh,9.5rem) + var(--banner-extra));padding-bottom:clamp(2.5rem,5vw,4rem);position:relative;overflow:hidden}
 .hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:var(--line)}
@@ -248,7 +227,13 @@ body.locked .session-banner{display:none}
 .hero-in{position:relative;z-index:1}
 .hero h1{margin-top:1.25rem;max-width:28ch;font-weight:600}
 .hero .lead{margin-top:1.5rem}
-.hero-ctas{margin-top:2.25rem;display:flex;flex-wrap:wrap;gap:.6rem}
+.hero-ctas{margin-top:2.25rem;display:flex;flex-wrap:wrap;align-items:center;gap:.75rem 1.25rem}
+.hero-reach{display:flex;flex-wrap:wrap;align-items:center;gap:.15rem 1.1rem}
+.hero-reach a{font-weight:600;font-size:.9375rem;line-height:1.35;padding:.35rem 0;border-bottom:1px solid var(--line-2);overflow-wrap:anywhere}
+.hero-reach a:hover{color:var(--accent);border-bottom-color:var(--accent)}
+.price-note{margin-top:1.35rem;max-width:42rem;color:var(--text);font-size:1.0625rem;font-weight:700;letter-spacing:-.015em;line-height:1.4}
+.price-note span{display:block;margin-top:.4rem;color:var(--text-2);font-weight:500;font-size:.9375rem;letter-spacing:-.01em;line-height:1.5}
+@media (max-width:640px){.hero-reach{flex-direction:column;align-items:flex-start;gap:.15rem}}
 
 /* ═══ Capability strip ════════════════════════════════════════════════════ */
 .caps{border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(3,1fr)}
@@ -362,8 +347,25 @@ legend{padding:0;margin-bottom:.55rem}
 .seg input:checked + span{background:var(--text);color:#0C0D0F;border-color:var(--text)}
 .seg label:hover span{border-color:var(--text)}
 .fform{display:flex;flex-wrap:wrap;align-items:center;gap:1rem;margin-top:.25rem}
-.note{font-size:.8125rem;color:var(--text-3);max-width:32ch;line-height:1.45}
+.reply-note{margin:0 0 .9rem;font-size:.8125rem;color:var(--text-2);line-height:1.45}
+#enquiry{scroll-margin-top:calc(5.5rem + var(--banner-extra))}
+.note{font-size:.8125rem;color:var(--text-3);max-width:46ch;line-height:1.45;overflow-wrap:anywhere}
+.note.ok{color:var(--text)}
+.note.err{color:var(--accent)}
+.note a{text-decoration:underline;text-underline-offset:.15em}
+.field input[aria-invalid="true"],.field textarea[aria-invalid="true"]{border-color:var(--accent)}
+.btn[disabled]{opacity:.55;cursor:progress}
+.contact-actions{display:none}
 .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+@media (max-width:880px){
+  .contact-grid > .rv:first-child{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:.75rem;align-items:end}
+  .contact-grid > .rv:first-child > .mono,
+  .contact-grid > .rv:first-child > .lead,
+  .contact-grid > .rv:first-child > .direct{grid-column:1 / -1}
+  .contact-grid > .rv:first-child > h2{grid-column:1}
+  .contact-actions{display:flex;grid-column:2;grid-row:2;margin:0;align-self:end}
+  .contact-actions .btn{width:auto}
+}
 
 /* ═══ Footer ══════════════════════════════════════════════════════════════ */
 .ft{border-top:1px solid var(--line);padding-block:clamp(2.5rem,5vw,4rem) 0}
@@ -387,23 +389,15 @@ legend{padding:0;margin-bottom:.55rem}
 .dock-in{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;max-width:30rem;margin-inline:auto}
 .dock a{display:flex;align-items:center;justify-content:center;padding:.8rem;font-size:.875rem;font-weight:700}
 .dock .a{background:var(--text);color:#0C0D0F}
-.dock .b{border:1px solid var(--line-2)}
+.dock .b{border:1px solid var(--line-2);font-size:.8125rem;letter-spacing:-.02em;text-align:center}
 @media (max-width:880px){.dock{display:block}}
 @media (prefers-reduced-motion:reduce){.dock{transition:none}}
 </style>
-<script>try{if(sessionStorage.getItem('wsfb-ai-session-banner')==='1')document.documentElement.classList.add('banner-off')}catch(e){}</script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 
 <header class="hdr" id="hdr">
-  <div class="session-banner" id="session-banner" role="region" aria-label="AI Information Session">
-    <div class="session-banner-in">
-      <p>Free AI Information Session — Tue 22 Sep, 7pm Sydney (30 mins)</p>
-      <a class="session-banner-cta" href="https://docs.google.com/forms/d/e/1FAIpQLSf3f_gJ4QQ9EVLPRlVa1ZmlNRayrVVTMbHmtOYdT8Gv6Xra9w/viewform" target="_blank" rel="noopener noreferrer">Sign up</a>
-      <button class="session-banner-x" type="button" aria-label="Dismiss banner" onclick="try{sessionStorage.setItem('wsfb-ai-session-banner','1')}catch(e){}document.documentElement.classList.add('banner-off')">✕</button>
-    </div>
-  </div>
   <div class="hdr-in">
     <a class="mark" href="#top" aria-label="Web Services for Business — home">
       <i aria-hidden="true"></i>
@@ -456,11 +450,16 @@ legend{padding:0;margin-bottom:.55rem}
     <h1 class="h-xl rv" style="--d:60ms">Web design for small business.<br>AI made simple.</h1>
     <p class="lead rv" style="--d:120ms">Hand-built sites for businesses that want to grow.</p>
     <p class="lead rv" style="--d:150ms;margin-top:.75rem">Practical AI help that you'll understand, in a way that can help your business.</p>
+    <p class="price-note rv" style="--d:165ms">One-page site from $500.<span>Site Purchase $500. Hosting $100. Google SEO $200. Additional Edits $100/hr.</span></p>
     <div class="hero-ctas rv" style="--d:180ms">
       <a class="btn btn-primary" href="#contact">
         Start a project
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M1 6h9M6.5 2.5 10 6l-3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg>
       </a>
+      <div class="hero-reach">
+        <a href="tel:+61450914150">+61 450 914 150</a>
+        <a href="mailto:support@webservicesforbusiness.com">support@webservicesforbusiness.com</a>
+      </div>
       <a class="btn btn-ghost" href="#work">See the work</a>
     </div>
   </div>
@@ -648,24 +647,27 @@ legend{padding:0;margin-bottom:.55rem}
             <span class="v">Within one business day</span>
           </div>
         </div>
+        <div class="contact-actions">
+          <a class="btn btn-primary" href="#enquiry">
+            Send
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M1 6h9M6.5 2.5 10 6l-3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg>
+          </a>
+        </div>
       </div>
 
       <div class="rv" style="--d:90ms">
-        <!-- Posts nowhere: opens the visitor's mail client. To wire a backend, add
-             action="https://formspree.io/f/XXXX" method="POST" to the form below —
-             the submit handler steps aside when an action is present. -->
-        <form id="enquiry" novalidate>
+        <form id="enquiry" action="/api/contact" method="post" novalidate>
           <div class="frow">
             <div class="field"><label class="mono" for="f-name">Name</label>
-              <input id="f-name" name="name" type="text" autocomplete="name" required></div>
+              <input id="f-name" name="name" type="text" autocomplete="name" required maxlength="80"></div>
             <div class="field"><label class="mono" for="f-company">Company</label>
-              <input id="f-company" name="company" type="text" autocomplete="organization"></div>
+              <input id="f-company" name="company" type="text" autocomplete="organization" maxlength="120"></div>
           </div>
           <div class="frow">
             <div class="field"><label class="mono" for="f-email">Email</label>
-              <input id="f-email" name="email" type="email" autocomplete="email" required></div>
+              <input id="f-email" name="email" type="email" autocomplete="email" required maxlength="120"></div>
             <div class="field"><label class="mono" for="f-phone">Phone</label>
-              <input id="f-phone" name="phone" type="tel" autocomplete="tel"></div>
+              <input id="f-phone" name="phone" type="tel" autocomplete="tel" maxlength="40"></div>
           </div>
           <fieldset>
             <legend class="mono">Requirement</legend>
@@ -676,17 +678,18 @@ legend{padding:0;margin-bottom:.55rem}
             </div>
           </fieldset>
           <div class="field"><label class="mono" for="f-msg">Detail</label>
-            <textarea id="f-msg" name="message" placeholder="A few lines is enough."></textarea></div>
+            <textarea id="f-msg" name="message" required maxlength="4000" placeholder="A few lines is enough."></textarea></div>
           <div class="hp" aria-hidden="true">
             <label for="f-hp">Leave empty</label>
-            <input id="f-hp" name="website" type="text" tabindex="-1" autocomplete="off">
+            <input id="f-hp" name="hp_field" type="text" tabindex="-1" autocomplete="off">
           </div>
+          <p class="reply-note" id="reply-note">We reply within one business day.</p>
           <div class="fform">
             <button class="btn btn-primary" type="submit">
-              Send
+              <span class="btn-label">Send</span>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M1 6h9M6.5 2.5 10 6l-3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg>
             </button>
-            <p class="note" id="form-note" role="status">Opens your email client. Nothing is stored on this site.</p>
+            <p class="note" id="form-note" role="status"></p>
           </div>
         </form>
       </div>
@@ -719,8 +722,8 @@ legend{padding:0;margin-bottom:.55rem}
 
 <div class="dock" id="dock">
   <div class="dock-in">
-    <a class="a" href="#contact">Start a project</a>
-    <a class="b" href="mailto:support@webservicesforbusiness.com">Email</a>
+    <a class="a" href="#enquiry">Send</a>
+    <a class="b" href="tel:+61450914150">+61 450 914 150</a>
   </div>
 </div>
 
@@ -794,30 +797,141 @@ legend{padding:0;margin-bottom:.55rem}
   }
 
   var form = document.getElementById('enquiry'), note = document.getElementById('form-note');
-  if (form) form.addEventListener('submit', function (ev) {
-    if (form.getAttribute('action')) return;
-    ev.preventDefault();
-    if (form.elements.website && form.elements.website.value) return;
-    var name = (form.elements.name.value || '').trim(), email = (form.elements.email.value || '').trim();
-    if (!name || !email || email.indexOf('@') < 1) {
-      note.textContent = 'Add a name and valid email so a reply can reach you.';
-      note.style.color = 'var(--accent)';
-      (!name ? form.elements.name : form.elements.email).focus();
-      return;
+  var NAME_BLOCK = { test: 1, testing: 1, asdf: 1, asdfasdf: 1, qwerty: 1, fake: 1, xxx: 1, none: 1, 'n/a': 1, na: 1, abc: 1, foo: 1, bar: 1, anonymous: 1, name: 1, user: 1, admin: 1 };
+  var BAD_DOMAINS = { 'example.com': 1, 'example.org': 1, 'example.net': 1, 'test.com': 1, 'test.test': 1, 'invalid.com': 1, 'fake.com': 1, localhost: 1 };
+  var EMAIL_RE = /^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*\.[a-z]{2,}$/i;
+  var FIELD_ID = { name: 'f-name', company: 'f-company', email: 'f-email', phone: 'f-phone', message: 'f-msg' };
+
+  function setNote(kind, text) {
+    if (!note) return;
+    note.className = 'note' + (kind ? ' ' + kind : '');
+    note.textContent = text || '';
+  }
+  function setFallback(lead) {
+    if (!note) return;
+    note.className = 'note err';
+    note.textContent = '';
+    note.appendChild(document.createTextNode(lead + ' Call '));
+    var call = document.createElement('a');
+    call.href = 'tel:+61450914150';
+    call.textContent = '+61 450 914 150';
+    note.appendChild(call);
+    note.appendChild(document.createTextNode(' or email '));
+    var mail = document.createElement('a');
+    mail.href = 'mailto:support@webservicesforbusiness.com';
+    mail.textContent = 'support@webservicesforbusiness.com';
+    note.appendChild(mail);
+    note.appendChild(document.createTextNode('.'));
+  }
+  function clearInvalid() {
+    Object.keys(FIELD_ID).forEach(function (key) {
+      var el = document.getElementById(FIELD_ID[key]);
+      if (el) el.removeAttribute('aria-invalid');
+    });
+  }
+  function showInvalid(field, message) {
+    clearInvalid();
+    setNote('err', message);
+    var el = field === 'need' ? form.querySelector('input[name="need"]') : document.getElementById(FIELD_ID[field]);
+    if (el) {
+      if (el.setAttribute) el.setAttribute('aria-invalid', 'true');
+      el.focus();
     }
-    var need = form.querySelector('input[name="need"]:checked'),
-        co = (form.elements.company.value || '').trim(),
-        ph = (form.elements.phone.value || '').trim(),
-        msg = (form.elements.message.value || '').trim();
-    var body = ['Name: ' + name, co ? 'Company: ' + co : '', 'Email: ' + email,
-                ph ? 'Phone: ' + ph : '', 'Requirement: ' + (need ? need.value : '—'), '',
-                msg || '(no detail)'].filter(Boolean).join('\n');
-    location.href = 'mailto:support@webservicesforbusiness.com?subject='
-      + encodeURIComponent('Enquiry — ' + (need ? need.value : 'General') + (co ? ' — ' + co : ''))
-      + '&body=' + encodeURIComponent(body);
-    note.textContent = 'Opening your email client…';
-    note.style.color = '';
-  });
+  }
+  function clientError(data) {
+    var name = (data.name || '').trim();
+    var email = (data.email || '').trim();
+    var phone = (data.phone || '').trim();
+    var message = (data.message || '').trim();
+    var company = (data.company || '').trim();
+    if (!/[a-z]{2,}/i.test(name) || NAME_BLOCK[name.toLowerCase()]) {
+      return { field: 'name', message: 'Add your name (at least two letters).' };
+    }
+    if (company.length > 120) return { field: 'company', message: 'Shorten the company name.' };
+    if (!EMAIL_RE.test(email)) return { field: 'email', message: 'Add a valid email so a reply can reach you.' };
+    var domain = email.toLowerCase().split('@')[1] || '';
+    if (BAD_DOMAINS[domain] || /\.(invalid|test)$/.test(domain)) {
+      return { field: 'email', message: 'Add a valid email so a reply can reach you.' };
+    }
+    if (phone) {
+      var digits = phone.replace(/\D/g, '');
+      if (digits.length < 6 || digits.length > 20) return { field: 'phone', message: 'Add a phone number we can call, or leave it blank.' };
+    }
+    if (!data.need || (data.need !== 'Website' && data.need !== 'AI' && data.need !== 'Both')) {
+      return { field: 'need', message: 'Choose Website, AI, or Both.' };
+    }
+    if (message.length < 10 || !/[a-z]/i.test(message) || /^(.)\1+$/i.test(message.replace(/\s/g, ''))) {
+      return { field: 'message', message: 'Add a short message about what you need.' };
+    }
+    return null;
+  }
+
+  if (form && note) {
+    form.addEventListener('input', function (e) {
+      if (e.target && e.target.removeAttribute) e.target.removeAttribute('aria-invalid');
+    });
+    form.addEventListener('submit', function (ev) {
+      if (!window.fetch) return;
+      ev.preventDefault();
+      var btn = form.querySelector('[type="submit"]');
+      var label = btn && btn.querySelector('.btn-label');
+      if (btn && btn.disabled) return;
+      var picked = form.querySelector('input[name="need"]:checked');
+      var data = {
+        name: form.elements.name.value,
+        company: form.elements.company.value,
+        email: form.elements.email.value,
+        phone: form.elements.phone.value,
+        need: picked ? picked.value : '',
+        message: form.elements.message.value,
+        hp_field: form.elements.hp_field ? form.elements.hp_field.value : ''
+      };
+      if (data.hp_field) {
+        setNote('ok', 'Sent. We reply within one business day.');
+        form.reset();
+        return;
+      }
+      var problem = clientError(data);
+      if (problem) {
+        showInvalid(problem.field, problem.message);
+        return;
+      }
+      clearInvalid();
+      setNote('', '');
+      if (btn) btn.disabled = true;
+      if (label) label.textContent = 'Sending…';
+      fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(data)
+      }).then(function (r) {
+        return r.json().then(function (body) {
+          return { status: r.status, body: body };
+        }, function () {
+          return { status: r.status, body: null };
+        });
+      }).then(function (res) {
+        if (btn) btn.disabled = false;
+        if (label) label.textContent = 'Send';
+        if (res.body && res.body.ok) {
+          setNote('ok', 'Sent. We reply within one business day.');
+          form.reset();
+          note.setAttribute('tabindex', '-1');
+          note.focus();
+          return;
+        }
+        if (res.body && res.body.error === 'invalid') {
+          showInvalid(res.body.field, res.body.message || 'Check the form and try again.');
+          return;
+        }
+        setFallback("That didn't send.");
+      }).catch(function () {
+        if (btn) btn.disabled = false;
+        if (label) label.textContent = 'Send';
+        setFallback("That didn't send.");
+      });
+    });
+  }
 })();
 </script>
 
