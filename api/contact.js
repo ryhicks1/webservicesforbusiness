@@ -1,24 +1,23 @@
 /**
  * Enquiry endpoint for the marketing site.
  *
- * Vercel (project webservicesforbusiness) → Settings → Environment Variables:
- *   RESEND_API_KEY   required. Create one at https://resend.com/api-keys
- *   RESEND_FROM      optional. Verified sender. Default is
- *                    Web Services for Business <support@webservicesforbusiness.com>
+ * Sends through Google SMTP (smtp.gmail.com, port 465, TLS) as
+ * ryan@webservicesforbusiness.com. Vercel project webservicesforbusiness →
+ * Settings → Environment Variables, Production:
+ *   SMTP_USER   ryan@webservicesforbusiness.com
+ *   SMTP_PASS   Google app password for that account (2-step verification on)
  *
- * The domain must be verified in Resend (https://resend.com/domains) before
- * mail will deliver. Add only the records Resend shows. Do not replace the
- * MX records that already receive mail for support@.
- *
- * When RESEND_API_KEY is missing or Resend rejects the send, the handler
+ * When either variable is missing, or Gmail rejects the send, the handler
  * returns a failure the page turns into the phone and email fallback.
- * Nothing here is a secret. Do not hard-code an API key.
+ * Nothing here is a secret. Do not hard-code the app password.
  */
 
 'use strict';
 
-var TO = 'support@webservicesforbusiness.com';
-var DEFAULT_FROM = 'Web Services for Business <support@webservicesforbusiness.com>';
+var nodemailer = require('nodemailer');
+
+var TO = 'ryan@webservicesforbusiness.com';
+var SMTP = { host: 'smtp.gmail.com', port: 465, secure: true };
 var NEEDS = { Website: true, AI: true, Both: true };
 var NAME_BLOCK = {
   test: true, testing: true, asdf: true, asdfasdf: true, qwerty: true,
@@ -106,9 +105,8 @@ function buildEnquiry(value) {
     '',
     value.message
   ].filter(function (line) { return line !== ''; });
-  var subject = 'Enquiry — ' + value.need + (value.company ? ' — ' + value.company : '');
   return {
-    subject: subject.slice(0, 180),
+    subject: ('WSFB enquiry from ' + value.name).slice(0, 180),
     text: lines.join('\n')
   };
 }
@@ -196,38 +194,49 @@ function send(res, code, payload, html) {
   res.json(payload);
 }
 
-function fromAddress() {
-  var configured = oneLine(process.env.RESEND_FROM || '', 200);
-  return configured || DEFAULT_FROM;
+function smtpUser() {
+  return oneLine(process.env.SMTP_USER || '', 200);
+}
+
+function smtpPass() {
+  var pass = process.env.SMTP_PASS;
+  if (pass == null) return '';
+  return String(pass).replace(/\s+/g, '');
+}
+
+function createTransport(auth) {
+  return nodemailer.createTransport({
+    host: SMTP.host,
+    port: SMTP.port,
+    secure: SMTP.secure,
+    auth: { user: auth.user, pass: auth.pass }
+  });
 }
 
 async function deliver(value) {
-  var key = process.env.RESEND_API_KEY;
-  if (!key || !String(key).trim()) {
-    var missing = new Error('RESEND_API_KEY is not set');
+  var user = smtpUser();
+  var pass = smtpPass();
+  if (!user || !pass) {
+    var missing = new Error('SMTP_USER or SMTP_PASS is not set');
     missing.code = 'unavailable';
     throw missing;
   }
   var built = buildEnquiry(value);
-  var response = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: 'Bearer ' + String(key).trim(),
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      from: fromAddress(),
-      to: [TO],
-      reply_to: value.email,
+  var factory = handler.createTransport || createTransport;
+  var transport = factory({ user: user, pass: pass });
+  try {
+    await transport.sendMail({
+      from: user,
+      to: TO,
+      replyTo: value.email,
       subject: built.subject,
       text: built.text
-    })
-  });
-  if (!response.ok) {
-    var detail = '';
-    try { detail = await response.text(); } catch (err) { detail = ''; }
-    console.error('Resend rejected the enquiry', response.status, detail.slice(0, 500));
-    var failed = new Error('Resend rejected the enquiry');
+    });
+  } catch (err) {
+    var detail = String(err && err.message || 'SMTP send failed');
+    if (detail.indexOf(pass) !== -1) detail = detail.split(pass).join('[redacted]');
+    console.error('Enquiry not sent', detail.slice(0, 500));
+    var failed = new Error('SMTP send failed');
     failed.code = 'delivery';
     throw failed;
   }
@@ -307,7 +316,7 @@ async function handler(req, res) {
     await deliver(result.value);
   } catch (err) {
     var code = err && err.code === 'unavailable' ? 'unavailable' : 'delivery';
-    if (code === 'unavailable') console.error('Enquiry not sent: RESEND_API_KEY is not set');
+    if (code === 'unavailable') console.error('Enquiry not sent: SMTP_USER or SMTP_PASS is not set');
     else if (!(err && err.code === 'delivery')) console.error('Enquiry not sent', err && err.message);
     var status = code === 'unavailable' ? 503 : 502;
     if (html) {
@@ -330,6 +339,8 @@ async function handler(req, res) {
 
 handler.validateEnquiry = validateEnquiry;
 handler.buildEnquiry = buildEnquiry;
+handler.smtp = SMTP;
+handler.createTransport = createTransport;
 handler.resetForTests = function () { hits.clear(); };
 
 module.exports = handler;

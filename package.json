@@ -1,0 +1,8 @@
+{
+  "name": "webservicesforbusiness",
+  "private": true,
+  "description": "Marketing site for webservicesforbusiness.com",
+  "dependencies": {
+    "nodemailer": "^10.0.13"
+  }
+}

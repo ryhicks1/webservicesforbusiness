@@ -40,10 +40,29 @@ function invoke(body, opts) {
   return handler(req, res).then(function () { return res; });
 }
 
+var realTransport = handler.createTransport;
+
+function useSmtp(sendMail) {
+  process.env.SMTP_USER = 'ryan@webservicesforbusiness.com';
+  process.env.SMTP_PASS = 'abcd efgh ijkl mnop';
+  var seen = { auth: null, message: null };
+  handler.createTransport = function (auth) {
+    seen.auth = auth;
+    return {
+      sendMail: function (message) {
+        seen.message = message;
+        return sendMail(message);
+      }
+    };
+  };
+  return seen;
+}
+
 test.beforeEach(function () {
   handler.resetForTests();
-  delete process.env.RESEND_API_KEY;
-  delete process.env.RESEND_FROM;
+  handler.createTransport = realTransport;
+  delete process.env.SMTP_USER;
+  delete process.env.SMTP_PASS;
 });
 
 test('accepts a real enquiry', function () {
@@ -52,8 +71,9 @@ test('accepts a real enquiry', function () {
   assert.equal(result.spam, false);
   assert.equal(result.value.email, 'alex@nguyenplumbing.com.au');
   var built = handler.buildEnquiry(result.value);
-  assert.match(built.subject, /Enquiry — Website — Nguyen Plumbing/);
+  assert.equal(built.subject, 'WSFB enquiry from Alex Nguyen');
   assert.match(built.text, /Need a one-page site/);
+  assert.deepEqual(handler.smtp, { host: 'smtp.gmail.com', port: 465, secure: true });
 });
 
 test('rejects obviously fake name, email, and message', function () {
@@ -76,73 +96,46 @@ test('phone is optional and junk phone is rejected', function () {
 });
 
 test('honeypot is treated as success and is not emailed', async function () {
-  var called = false;
-  var original = global.fetch;
-  global.fetch = function () { called = true; return Promise.resolve({ ok: true }); };
-  process.env.RESEND_API_KEY = 're_test_key';
-  try {
-    var res = await invoke(valid({ hp_field: 'http://spam.example' }));
-    assert.equal(res.statusCode, 200);
-    assert.deepEqual(res.body, { ok: true });
-    assert.equal(called, false);
-  } finally {
-    global.fetch = original;
-  }
+  var seen = useSmtp(function () { throw new Error('should not send'); });
+  var res = await invoke(valid({ hp_field: 'http://spam.example' }));
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body, { ok: true });
+  assert.equal(seen.message, null);
 });
 
-test('missing API key fails gracefully', async function () {
+test('missing SMTP settings fail gracefully', async function () {
   var res = await invoke(valid());
   assert.equal(res.statusCode, 503);
   assert.equal(res.body.error, 'unavailable');
   assert.equal(res.body.ok, false);
+  process.env.SMTP_USER = 'ryan@webservicesforbusiness.com';
+  var onlyUser = await invoke(valid(), { ip: '203.0.113.11' });
+  assert.equal(onlyUser.statusCode, 503);
 });
 
-test('sends to support@ with reply-to when the key is set', async function () {
-  var captured;
-  var original = global.fetch;
-  global.fetch = function (url, opts) {
-    captured = { url: url, opts: opts };
-    return Promise.resolve({ ok: true, status: 200, text: async function () { return ''; } });
-  };
-  process.env.RESEND_API_KEY = 're_test_key';
-  process.env.RESEND_FROM = 'Web Services for Business <enquiries@webservicesforbusiness.com>';
-  try {
-    var res = await invoke(valid());
-    assert.equal(res.statusCode, 200);
-    assert.equal(res.body.ok, true);
-    assert.equal(captured.url, 'https://api.resend.com/emails');
-    assert.equal(captured.opts.headers.Authorization, 'Bearer re_test_key');
-    var payload = JSON.parse(captured.opts.body);
-    assert.deepEqual(payload.to, ['support@webservicesforbusiness.com']);
-    assert.equal(payload.reply_to, 'alex@nguyenplumbing.com.au');
-    assert.equal(payload.from, 'Web Services for Business <enquiries@webservicesforbusiness.com>');
-    assert.match(payload.text, /Alex Nguyen/);
-    assert.equal(payload.text.indexOf('re_test_key'), -1);
-  } finally {
-    global.fetch = original;
-  }
+test('sends to ryan@ with reply-to when SMTP is set', async function () {
+  var seen = useSmtp(function () { return Promise.resolve({ messageId: 'test' }); });
+  var res = await invoke(valid());
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.ok, true);
+  assert.equal(seen.auth.user, 'ryan@webservicesforbusiness.com');
+  assert.equal(seen.auth.pass, 'abcdefghijklmnop');
+  assert.equal(seen.message.from, 'ryan@webservicesforbusiness.com');
+  assert.equal(seen.message.to, 'ryan@webservicesforbusiness.com');
+  assert.equal(seen.message.replyTo, 'alex@nguyenplumbing.com.au');
+  assert.equal(seen.message.subject, 'WSFB enquiry from Alex Nguyen');
+  assert.match(seen.message.text, /Alex Nguyen/);
+  assert.equal(seen.message.text.indexOf('abcdefghijklmnop'), -1);
 });
 
-test('provider failure returns the delivery error', async function () {
-  var original = global.fetch;
-  global.fetch = function () {
-    return Promise.resolve({
-      ok: false,
-      status: 422,
-      text: async function () { return '{"message":"domain not verified"}'; }
-    });
-  };
-  process.env.RESEND_API_KEY = 're_test_key';
-  try {
-    var res = await invoke(valid());
-    assert.equal(res.statusCode, 502);
-    assert.equal(res.body.error, 'delivery');
-  } finally {
-    global.fetch = original;
-  }
+test('SMTP failure returns the delivery error', async function () {
+  useSmtp(function () { return Promise.reject(new Error('Invalid login')); });
+  var res = await invoke(valid());
+  assert.equal(res.statusCode, 502);
+  assert.equal(res.body.error, 'delivery');
 });
 
-test('html form post without a key shows the phone and email fallback', async function () {
+test('html form post without SMTP settings shows the phone and email fallback', async function () {
   var res = await invoke(valid(), { headers: { accept: 'text/html', host: 'localhost:3456' } });
   assert.equal(res.statusCode, 503);
   assert.match(res.body, /That didn/);
@@ -155,6 +148,7 @@ test('strips line breaks so the subject stays one line', function () {
   var result = handler.validateEnquiry(valid({ company: 'Acme\r\nPlumbing' }));
   assert.equal(result.ok, true);
   var built = handler.buildEnquiry(result.value);
+  assert.equal(built.subject, 'WSFB enquiry from Alex Nguyen');
   assert.equal(built.subject.indexOf('\n'), -1);
   assert.equal(built.subject.indexOf('\r'), -1);
   assert.equal(result.value.company, 'Acme Plumbing');
@@ -168,17 +162,9 @@ test('rejects a non-post', async function () {
 });
 
 test('rate limit kicks in after repeated posts', async function () {
-  process.env.RESEND_API_KEY = 're_test_key';
-  var original = global.fetch;
-  global.fetch = function () {
-    return Promise.resolve({ ok: true, status: 200, text: async function () { return ''; } });
-  };
-  try {
-    var last;
-    for (var i = 0; i < 6; i++) last = await invoke(valid(), { ip: '198.51.100.8' });
-    assert.equal(last.statusCode, 429);
-    assert.equal(last.body.error, 'limited');
-  } finally {
-    global.fetch = original;
-  }
+  useSmtp(function () { return Promise.resolve({ messageId: 'test' }); });
+  var last;
+  for (var i = 0; i < 6; i++) last = await invoke(valid(), { ip: '198.51.100.8' });
+  assert.equal(last.statusCode, 429);
+  assert.equal(last.body.error, 'limited');
 });

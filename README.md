@@ -1,12 +1,16 @@
 # Web Services for Business — marketing site
 
-Single-page static site for **webservicesforbusiness.com**. No build step, no
-dependencies, no backend. Open `index.html` and it runs.
+Single-page static site for **webservicesforbusiness.com**. No build step.
+Open `index.html` and the pages run. The contact form is the one server
+piece: `/api/contact` uses nodemailer, so install dependencies before that
+function can send mail.
 
 ```
 .
 ├── index.html              the deploy build — markup, CSS and JS inline
 ├── index.standalone.html   same page with fonts inlined; opens with no server
+├── api/contact.js          enquiry endpoint — Google SMTP via nodemailer
+├── package.json            nodemailer dependency for that endpoint
 ├── robots.txt              allows indexing — the site is live
 ├── fonts/                  Archivo + IBM Plex Mono (woff2, latin subset)
 ├── img/og.png              1200×630 social share card
@@ -17,10 +21,10 @@ dependencies, no backend. Open `index.html` and it runs.
 ## Deploy
 
 Vercel: import this repository, Framework Preset **Other**, and leave Root
-Directory, build, install and output all empty — the site is served from the
-repository root as-is. `/api/contact.js` is picked up as a Function without a
-build step. Any static host can serve the pages; the form needs that Function
-(or an equivalent) to deliver mail.
+Directory, build, and output empty — the site is served from the repository
+root as-is. Vercel installs `nodemailer` for `/api/contact.js`. Leave the
+build command empty. Any static host can serve the pages; the form needs that
+Function to deliver mail.
 
 This site previously lived in `site/` inside `ryhicks1/scripttocast`. It was
 split out with `git subtree split`, so the commit history came across intact.
@@ -85,24 +89,28 @@ so a missing or failed image reveals the plate underneath instead of a broken ic
 ## Contact form
 
 The homepage form posts to `/api/contact` (a Vercel Function). It checks the
-name, email, and message, ignores a filled honeypot, and sends the enquiry to
-support@webservicesforbusiness.com through [Resend](https://resend.com). The
-button label is **Send** on the form, on the mobile jump link beside the
-contact details, and on the mobile dock.
+name, email, and message, ignores a filled honeypot, and sends the enquiry
+through Google SMTP (`smtp.gmail.com`, port 465) as
+`ryan@webservicesforbusiness.com`, to that same address. Reply-To is the
+visitor, so a reply goes straight back to them. The subject is
+`WSFB enquiry from {name}`. The button label is **Send** on the form, on the
+mobile jump link beside the contact details, and on the mobile dock.
 
-Mail is not delivered until `RESEND_API_KEY` is set. If the key is missing, or
-Resend rejects the send, the page stays up and shows the phone and email
-fallback. Nothing in the repository is a secret.
+Mail is not delivered until `SMTP_USER` and `SMTP_PASS` are set. If either is
+missing, or Gmail rejects the send, the page stays up and shows the phone and
+email fallback. Nothing in the repository is a secret.
 
-Set this on the Vercel project **webservicesforbusiness** → Settings →
-Environment Variables, then redeploy:
+On the Google account `ryan@webservicesforbusiness.com`:
 
-| Variable | Required | Where to get it |
+1. Turn on [2-step verification](https://myaccount.google.com/signinoptions/two-step-verification).
+2. Create an [app password](https://myaccount.google.com/apppasswords). If that page is blocked, a Workspace admin has to allow app passwords for the account. Do not use the normal mailbox password.
+
+Then on the Vercel project **webservicesforbusiness** → Settings →
+Environment Variables, set both for **Production** and redeploy:
+
+| Variable | Required | Value |
 | --- | --- | --- |
-| `RESEND_API_KEY` | Yes | [resend.com/api-keys](https://resend.com/api-keys) after creating a free account |
-| `RESEND_FROM` | No | Verified sender. Default is `Web Services for Business <support@webservicesforbusiness.com>` |
-
-Verify the domain at [resend.com/domains](https://resend.com/domains) and add
-the DNS records Resend shows. Do not replace existing MX records.
+| `SMTP_USER` | Yes | `ryan@webservicesforbusiness.com` |
+| `SMTP_PASS` | Yes | The Google app password from the step above |
 
 See `.env.example`. Run `node --test tools/enquiry.test.cjs` to check the endpoint.
