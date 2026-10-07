@@ -356,7 +356,7 @@ legend{padding:0;margin-bottom:.55rem}
 .field input[aria-invalid="true"],.field textarea[aria-invalid="true"]{border-color:var(--accent)}
 .btn[disabled]{opacity:.55;cursor:progress}
 .contact-actions{display:none}
-.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.hp{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
 @media (max-width:880px){
   .contact-grid > .rv:first-child{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:.75rem;align-items:end}
   .contact-grid > .rv:first-child > .mono,
@@ -679,10 +679,11 @@ legend{padding:0;margin-bottom:.55rem}
           </fieldset>
           <div class="field"><label class="mono" for="f-msg">Detail</label>
             <textarea id="f-msg" name="message" required maxlength="4000" placeholder="A few lines is enough."></textarea></div>
-          <div class="hp" aria-hidden="true">
+          <div class="hp" inert aria-hidden="true">
             <label for="f-hp">Leave empty</label>
-            <input id="f-hp" name="hp_field" type="text" tabindex="-1" autocomplete="off">
+            <input id="f-hp" name="hp_field" type="text" tabindex="-1" autocomplete="off" autocapitalize="off" spellcheck="false" aria-hidden="true">
           </div>
+          <input type="hidden" name="form_token" id="f-token" value="" autocomplete="off">
           <p class="reply-note" id="reply-note">We reply within one business day.</p>
           <div class="fform">
             <button class="btn btn-primary" type="submit">
@@ -866,6 +867,57 @@ legend{padding:0;margin-bottom:.55rem}
     return null;
   }
 
+  var tokenInput = document.getElementById('f-token');
+  var tokenAt = 0;
+  var tokenFlight = null;
+  // Server rejects posts sooner than 3s after it signed the token. Wait from
+  // the moment the token arrived so a fast visitor still gets through.
+  var TOKEN_WAIT_MS = 3200;
+
+  function pullToken() {
+    if (!window.fetch) return Promise.resolve('');
+    if (tokenInput && tokenInput.value) return Promise.resolve(tokenInput.value);
+    if (tokenFlight) return tokenFlight;
+    tokenFlight = fetch('/api/form-token', {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    }).then(function (r) {
+      if (!r.ok) throw new Error('token');
+      return r.json();
+    }).then(function (body) {
+      var token = body && body.token ? String(body.token) : '';
+      if (!token) throw new Error('token');
+      if (tokenInput) tokenInput.value = token;
+      tokenAt = Date.now();
+      return token;
+    }).catch(function () {
+      return '';
+    }).then(function (token) {
+      tokenFlight = null;
+      return token;
+    });
+    return tokenFlight;
+  }
+
+  function tokenForSubmit() {
+    return pullToken().then(function (token) {
+      if (!token) return '';
+      var wait = Math.max(0, tokenAt + TOKEN_WAIT_MS - Date.now());
+      if (!wait) return token;
+      return new Promise(function (resolve) {
+        setTimeout(function () { resolve(token); }, wait);
+      });
+    });
+  }
+
+  function refreshToken() {
+    if (tokenInput) tokenInput.value = '';
+    tokenAt = 0;
+    pullToken();
+  }
+
+  if (form && window.fetch) pullToken();
+
   if (form && note) {
     form.addEventListener('input', function (e) {
       if (e.target && e.target.removeAttribute) e.target.removeAttribute('aria-invalid');
@@ -889,6 +941,7 @@ legend{padding:0;margin-bottom:.55rem}
       if (data.hp_field) {
         setNote('ok', 'Sent. We reply within one business day.');
         form.reset();
+        refreshToken();
         return;
       }
       var problem = clientError(data);
@@ -900,10 +953,14 @@ legend{padding:0;margin-bottom:.55rem}
       setNote('', '');
       if (btn) btn.disabled = true;
       if (label) label.textContent = 'Sending…';
-      fetch('/api/contact', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify(data)
+      tokenForSubmit().then(function (token) {
+        if (!token) throw new Error('token');
+        data.form_token = token;
+        return fetch('/api/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify(data)
+        });
       }).then(function (r) {
         return r.json().then(function (body) {
           return { status: r.status, body: body };
@@ -916,6 +973,7 @@ legend{padding:0;margin-bottom:.55rem}
         if (res.body && res.body.ok) {
           setNote('ok', 'Sent. We reply within one business day.');
           form.reset();
+          refreshToken();
           note.setAttribute('tabindex', '-1');
           note.focus();
           return;

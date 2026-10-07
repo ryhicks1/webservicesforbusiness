@@ -10,11 +10,18 @@
  * When either variable is missing, or Gmail rejects the send, the handler
  * returns a failure the page turns into the phone and email fallback.
  * Nothing here is a secret. Do not hard-code the app password.
+ *
+ * Spam is a filled honeypot, a post sooner than 3 seconds after the signed
+ * load token from /api/form-token, a link (http, www., sslip.io, nip.io,
+ * .buzz), Cyrillic text, or a sender at smaqt.com / nolettersbox.com.
+ * Those posts get the normal success response and are not mailed. One line
+ * is logged with the reason only — not the message body and not the IP.
  */
 
 'use strict';
 
 var nodemailer = require('nodemailer');
+var guard = require('./enquiry-guard');
 
 var TO = 'ryan@webservicesforbusiness.com';
 var SMTP = { host: 'smtp.gmail.com', port: 465, secure: true };
@@ -50,10 +57,10 @@ function messageText(value, max) {
     .slice(0, max);
 }
 
-function validateEnquiry(input) {
+function validateEnquiry(input, now) {
   var src = input && typeof input === 'object' ? input : {};
   var honeypot = oneLine(src.hp_field, 200);
-  if (honeypot) return { ok: true, spam: true };
+  if (honeypot) return { ok: true, spam: true, reason: 'honeypot' };
 
   var name = oneLine(src.name, 80);
   var company = oneLine(src.company, 120);
@@ -61,6 +68,20 @@ function validateEnquiry(input) {
   var phone = oneLine(src.phone, 40);
   var need = oneLine(src.need, 20) || 'Website';
   var message = messageText(src.message, 4000);
+  var at = typeof now === 'number' ? now : Date.now();
+
+  var trap = guard.checkToken(oneLine(src.form_token, 200), at);
+  if (!trap.ok) return { ok: true, spam: true, reason: trap.reason };
+
+  var content = guard.checkContent({
+    name: name,
+    company: company,
+    email: email,
+    phone: phone,
+    need: need,
+    message: message
+  });
+  if (content) return { ok: true, spam: true, reason: content };
 
   if (!/[a-z]{2,}/i.test(name) || NAME_BLOCK[name.toLowerCase()]) {
     return { ok: false, field: 'name', message: 'Add your name (at least two letters).' };
@@ -304,6 +325,7 @@ async function handler(req, res) {
     return;
   }
   if (result.spam) {
+    console.log('Enquiry blocked: ' + guard.safeReason(result.reason));
     if (html) {
       send(res, 200, null, page('Message sent', 'Sent.', ['We reply within one business day.']));
       return;
@@ -339,6 +361,7 @@ async function handler(req, res) {
 
 handler.validateEnquiry = validateEnquiry;
 handler.buildEnquiry = buildEnquiry;
+handler.issueToken = guard.issueToken;
 handler.smtp = SMTP;
 handler.createTransport = createTransport;
 handler.resetForTests = function () { hits.clear(); };
