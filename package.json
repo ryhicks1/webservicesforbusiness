@@ -2,6 +2,9 @@
   "name": "webservicesforbusiness",
   "private": true,
   "description": "Marketing site for webservicesforbusiness.com",
+  "scripts": {
+    "test": "node --test tools/enquiry.test.cjs"
+  },
   "dependencies": {
     "nodemailer": "^10.0.13"
   }
